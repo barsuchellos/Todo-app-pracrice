@@ -1,0 +1,26 @@
+{% extends 'tasks/base.html' %}
+
+{% block content %}
+
+  <h2 class="mb-4">
+    {% if form.instance.pk %}
+      Update Tag
+    {% else %}
+      Create Tag
+    {% endif %}
+  </h2>
+
+  <form method="POST" class="w-50">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">
+      {% if form.instance.pk %}
+        Update
+      {% else %}
+        Create
+      {% endif %}
+    </button>
+    <a href="{% url 'tasks:tags-list' %}" class="btn btn-outline-secondary">Cancel</a>
+  </form>
+
+{% endblock content %}
