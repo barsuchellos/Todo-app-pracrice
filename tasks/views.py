@@ -1,76 +1,62 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import redirect, get_object_or_404
+from django.urls import reverse_lazy
+from django.views import View
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 
-from tasks.forms import TaskForm, TagForm
-from tasks.selectors import get_all_tasks, get_all_tasks_count, get_all_not_done_tasks_count, get_task, get_tags, \
-    get_tag
-from tasks.services import create_task_service, delete_task, update_task_service, switch_toggle, create_tag_service, \
-    update_tag_service, delete_tag
-
-
-def home(request):
-    context = {
-        "tasks": get_all_tasks(),
-    }
-    return render(request, "tasks/home.html", context=context)
+from tasks.models import Task, Tag
+from tasks.services import switch_toggle
 
 
-def task_create(request):
-    form = TaskForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        create_task_service(form.cleaned_data)
-        return redirect("tasks:home")
-    return render(request, "tasks/task_form.html", {"form": form})
+class TaskListView(ListView):
+    model = Task
+    template_name = "tasks/home.html"
+    context_object_name = 'tasks'
+    ordering = ['-created_at']
 
 
-def task_delete(request, pk):
-    task = get_task(pk)
-    if request.method == "POST":
-        delete_task(task)
-        return redirect("tasks:home")
-    else:
-        return render(request, "tasks/task_confirm_delete.html", {"task": task})
+class TaskCreateView(CreateView):
+    model = Task
+    fields = ["content", "deadline", "is_done", "tags"]
+    success_url = reverse_lazy('tasks:home')
 
 
-def task_update(request, pk):
-    task = get_task(pk)
-    form = TaskForm(request.POST or None, instance=task)
-    if request.method == "POST" and form.is_valid():
-        update_task_service(form.cleaned_data, task)
-        return redirect("tasks:home")
-    return render(request, "tasks/task_form.html", {"form": form})
+class TaskUpdateView(UpdateView):
+    model = Task
+    fields = ["content", "deadline", "is_done", "tags"]
+    success_url = reverse_lazy('tasks:home')
 
 
-def task_toggle(request, pk):
-    switch_toggle(pk)
-    return redirect("tasks:home")
+class TaskDeleteView(DeleteView):
+    model = Task
+    success_url = reverse_lazy('tasks:home')
 
 
-def get_tags_view(request):
-    context = {"tags": get_tags()}
-    return render(request, "tasks/tag_list.html", context=context)
+class TagListView(ListView):
+    model = Tag
+    template_name = "tasks/tag_list.html"
+    context_object_name = 'tags'
 
 
-def tag_create(request):
-    form = TagForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        create_tag_service(form.cleaned_data)
-        return redirect("tasks:tags-list")
-    return render(request, "tasks/tag_form.html", {"form": form})
+class TagDeleteView(DeleteView):
+    model = Tag
+    success_url = reverse_lazy('tasks:tags-list')
 
 
-def tag_update(request, pk):
-    tag = get_tag(pk)
-    form = TagForm(request.POST or None, instance=tag)
-    if request.method == "POST" and form.is_valid():
-        update_tag_service(form.cleaned_data, tag)
-        return redirect("tasks:tags-list")
-    return render(request, "tasks/tag_form.html", {"form": form})
+class TagUpdateView(UpdateView):
+    model = Tag
+    fields = ["name"]
+    success_url = reverse_lazy('tasks:tags-list')
 
 
-def tag_delete(request, pk):
-    tag = get_tag(pk)
-    if request.method == "POST":
-        delete_tag(tag)
-        return redirect("tasks:tags-list")
-    else:
-        return render(request, "tasks/tag_confirm_delete.html", {"tag": tag})
+class TagCreateView(CreateView):
+    model = Tag
+    fields = ["name"]
+    success_url = reverse_lazy('tasks:tags-list')
+
+
+class TaskToggleView(View):
+    def get(self, request, pk):
+        task = get_object_or_404(Task, pk=pk)
+        task.is_done = not task.is_done
+        task.save()
+        return redirect('tasks:home')
